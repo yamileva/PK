@@ -162,16 +162,24 @@ for rating in data['ratings']:
         continue
     if not rating["original_submitted"]:
         continue
+
+    modified_total_score = int(rating["score_total"])
+    if special_competition_groups[rating['competition_group_id']]:
+        modified_priority = int(rating['priority'])
+    elif rating['note'] == "Без вступительных испытаний":
+        modified_priority = 0
+        modified_total_score = 500
+    else:
+        modified_priority = int(rating['priority']) + 100
     if rating["applicant_id"] not in applicants:
         applicants[rating["applicant_id"]] = {
-            'max_score_total': int(rating["score_total"]),
-            'score_totals': [int(rating["score_total"])],
+            'max_score_total': modified_total_score,
+            'score_totals': [modified_total_score],
             'competition_groups_priorities': [(
-                int(rating['priority']) if special_competition_groups[rating['competition_group_id']]
-                else int(rating['priority']) + 100,
+                modified_priority,
                 rating["competition_group_id"],
                 (
-                    int(rating["score_total"]),
+                    modified_total_score,
                     int(rating["score_subject_1"]) + int(rating["score_subject_2"]) + int(rating["score_subject_3"]),
                     int(rating["score_subject_1"]),
                     int(rating["score_subject_2"]),
@@ -181,15 +189,14 @@ for rating in data['ratings']:
         }
     else:
         if int(rating["score_total"]) not in applicants[rating["applicant_id"]]['score_totals']:
-            applicants[rating["applicant_id"]]['score_totals'].append(int(rating["score_total"]))
+            applicants[rating["applicant_id"]]['score_totals'].append(modified_total_score)
             applicants[rating["applicant_id"]]['max_score_total'] = max(
                 applicants[rating["applicant_id"]]['score_totals'])
         applicants[rating["applicant_id"]]['competition_groups_priorities'].append((
-            int(rating['priority']) if special_competition_groups[rating['competition_group_id']]
-            else int(rating['priority']) + 100,
+            modified_priority,
             rating["competition_group_id"],
             (
-                int(rating["score_total"]),
+                modified_total_score,
                 int(rating["score_subject_1"]) + int(rating["score_subject_2"]) + int(rating["score_subject_3"]),
                 int(rating["score_subject_1"]),
                 int(rating["score_subject_2"]),
