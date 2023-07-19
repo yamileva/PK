@@ -162,16 +162,24 @@ for rating in data['ratings']:
         continue
     if not rating["original_submitted"]:
         continue
+
+    modified_total_score = int(rating["score_total"])
+    if special_competition_groups[rating['competition_group_id']]:
+        modified_priority = int(rating['priority'])
+    elif rating['note'] == "Без вступительных испытаний":
+        modified_priority = 0
+        modified_total_score = 500
+    else:
+        modified_priority = int(rating['priority']) + 100
     if rating["applicant_id"] not in applicants:
         applicants[rating["applicant_id"]] = {
-            'max_score_total': int(rating["score_total"]),
-            'score_totals': [int(rating["score_total"])],
+            'max_score_total': modified_total_score,
+            'score_totals': [modified_total_score],
             'competition_groups_priorities': [(
-                int(rating['priority']) if special_competition_groups[rating['competition_group_id']]
-                else int(rating['priority']) + 100,
+                modified_priority,
                 rating["competition_group_id"],
                 (
-                    int(rating["score_total"]),
+                    modified_total_score,
                     int(rating["score_subject_1"]) + int(rating["score_subject_2"]) + int(rating["score_subject_3"]),
                     int(rating["score_subject_1"]),
                     int(rating["score_subject_2"]),
@@ -181,15 +189,14 @@ for rating in data['ratings']:
         }
     else:
         if int(rating["score_total"]) not in applicants[rating["applicant_id"]]['score_totals']:
-            applicants[rating["applicant_id"]]['score_totals'].append(int(rating["score_total"]))
+            applicants[rating["applicant_id"]]['score_totals'].append(modified_total_score)
             applicants[rating["applicant_id"]]['max_score_total'] = max(
                 applicants[rating["applicant_id"]]['score_totals'])
         applicants[rating["applicant_id"]]['competition_groups_priorities'].append((
-            int(rating['priority']) if special_competition_groups[rating['competition_group_id']]
-            else int(rating['priority']) + 100,
+            modified_priority,
             rating["competition_group_id"],
             (
-                int(rating["score_total"]),
+                modified_total_score,
                 int(rating["score_subject_1"]) + int(rating["score_subject_2"]) + int(rating["score_subject_3"]),
                 int(rating["score_subject_1"]),
                 int(rating["score_subject_2"]),
@@ -256,9 +263,9 @@ with open(sys.argv[1].rstrip('.json') + "_lists.out", 'w', encoding="utf-8") as 
 
 with open(sys.argv[1].rstrip('.json') + "_brief.csv", 'w', encoding="utf-8") as outfile:
     print("specialty_code", "profile", "institution_name", "education_form", "funding", "category",
-          'plan_places', "current_places", sep=';', file=outfile)
+          'plan_places', "current_places", "fraction", sep=';', file=outfile)
     for group_id in competition_group_green_stacks:
-        print(competition_groups[group_id]["specialty_code"],
+        print("Sp " + competition_groups[group_id]["specialty_code"],
               competition_groups[group_id]["profile"],
               competition_groups[group_id]["institution_name"],
               competition_groups[group_id]["education_form"],
@@ -266,6 +273,8 @@ with open(sys.argv[1].rstrip('.json') + "_brief.csv", 'w', encoding="utf-8") as 
               competition_groups[group_id]["category"],
               filtered_competition_groups[group_id],
               len(competition_group_green_stacks[group_id]),
+              0 if filtered_competition_groups[group_id] == 0
+              else len(competition_group_green_stacks[group_id]) / filtered_competition_groups[group_id],
               sep=';', file=outfile)
 '''
 # проверка повторов приоритетов
