@@ -228,7 +228,7 @@ for rating_id in range(len(data['ratings'])):
     if data['ratings'][rating_id]["applicant_id"] in applicants and \
             data['ratings'][rating_id]["competition_group_id"] == applicants[data['ratings'][rating_id]["applicant_id"]]["consent"]:
         data['ratings'][rating_id]["consent_submitted"] = True
-        # print(data['ratings'][rating_id]["applicant_id"], applicants[data['ratings'][rating_id]["applicant_id"]]["consent"])
+        # print(result_data['ratings'][rating_id]["applicant_id"], applicants[result_data['ratings'][rating_id]["applicant_id"]]["consent"])
 
 with open(sys.argv[1].rstrip('.json')+"_green.json", mode="w", encoding="utf-8") as writefile:
     json.dump(data, writefile, ensure_ascii=False, indent=0)
