@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="table-responsive">
+  <table class="table table-condensed">
+    <thead>
+        <tr>
+        <th>№</th>
+        <th>Направление</th>
+        <th>ID поступающего / СНИЛС</th>
+        <th>Балл</th>
+        <th>П1</th>
+        <th>П2</th>
+        <th>П3</th>
+        <th>ИД</th>
+        <th>Приоритет</th>
+        <th>В проекте приказа</th>
+        <th>Подан оригинал</th>
+        <th>Примечание</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for item in stacks[4][app_id] %}
+        {% set group_id = item[1] %}
+        {% set name = ", ".join([stacks[0][group_id]["specialty_code"],
+                        stacks[0][group_id]["profile"],
+                        stacks[0][group_id]["institution_name"],
+                        stacks[0][group_id]["education_form"],
+                        stacks[0][group_id]["funding"],
+                        stacks[0][group_id]["category"]]) %}
+        {% if item[3] %}
+            {% set class_name = 'table-success' %}
+        {% else %}
+            {% set class_name = 'table-light' %}
+        {% endif %}
+        <tr class={{class_name}}>
+
+        <td>{{loop.index}}</td>
+        <td>{{name}}</td>
+        <td>{{app_id}}</td>
+        {% if item[2][0] == 500 %}
+            {% set scoring = '-' %}
+            {% set scoring1 = '-' %}
+            {% set scoring2 = '-' %}
+            {% set scoring3 = '-' %}
+            {% set score_id = '-' %}
+        {% else %}
+            {% set scoring = item[2][0] %}
+            {% set scoring1 = item[2][2] %}
+            {% set scoring2 = item[2][3] %}
+            {% set scoring3 = item[2][4] %}
+            {% set score_id = item[2][0] - item[2][1] %}
+        {% endif %}
+        <td>{{scoring}}</td>
+        <td>{{scoring1}}</td>
+        <td>{{scoring2}}</td>
+        <td>{{scoring3}}</td>
+        <td>{{score_id}}</td>
+        <td>{{item[0]}}</td>
+        {% if item[3] %}
+            {% set consent = 'Да' %}
+        {% else %}
+            {% set consent = 'Нет' %}
+        {% endif %}
+        <td>{{consent}}</td>
+        {% if item[4] %}
+            {% set original = 'Да' %}
+        {% else %}
+            {% set original = 'Нет' %}
+        {% endif %}
+        <td>{{original}}</td>
+        <td>{{item[5]}}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
