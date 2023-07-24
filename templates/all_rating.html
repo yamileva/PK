@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="table-responsive">
+  <table class="table">
+    <thead>
+        <tr>
+        <th>№</th>
+        <th>Направление</th>
+        <th>План</th>
+        <th>В проекте приказа</th>
+        <th>Заполненность, %</th>
+        <th>Баллы из приказа</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for group_id in stacks[0] %}
+        {% set name = ", ".join([stacks[0][group_id]["specialty_code"],
+                        stacks[0][group_id]["profile"],
+                        stacks[0][group_id]["institution_name"],
+                        stacks[0][group_id]["education_form"],
+                        stacks[0][group_id]["funding"],
+                        stacks[0][group_id]["category"]]) %}
+        {% set stack_len = stacks[2][group_id] | length %}
+        {% if stacks[1][group_id] == 0 %}
+            {% set fraction = 0 %}
+        {% else %}
+            {% set prefraction = stack_len / stacks[1][group_id] * 100 %}
+            {% set fraction = prefraction | round | int %}
+        {% endif %}
+
+        <tr>
+        <td>{{loop.index}}</td>
+        <td><a href={{group_id}}>{{name}}</a></td>
+        <td>{{stacks[1][group_id]}}</td>
+        <td>{{stack_len}}</td>
+        <td>{{fraction}}</td>
+        <td>
+            {% for item in stacks[2][group_id] %}
+                {% if item[0][0] == 500 %}
+                    {% set scoring = '-' %}
+                {% else %}
+                    {% set scoring = item[0][0] %}
+                {% endif %}
+
+                {{scoring}},
+            {% endfor %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
