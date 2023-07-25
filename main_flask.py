@@ -1,3 +1,5 @@
+import os
+from flask import send_from_directory
 from flask import Flask, render_template
 import time
 
@@ -9,9 +11,16 @@ from site_parsing import main_parsing
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ONF UGATU forever'
-last_update_dt = '07.24..20.09'
+last_update_dt = '07.25..12.24'
 parse_interval = 5
 log_name = "log.out"
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
 
 def site_parse():
     global last_update_dt

@@ -78,49 +78,27 @@ def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id, competition
     is_table = False
     col_num = 0
     id_group, category = "", ""
+    title_inits = False
     # first_head = True
-    no_profile = False
-    profile_num = -1
-    profiles = []
-    last_category = ""
     for line in html_str:
-        #try:
+        try:
             line = line.strip()
             if line.startswith('<h3'):
                 is_table = True
                 new_part = line[line.find(">") + 1:-(len('</h3>'))]
-                profile = new_part[:new_part.find(inst_name)][len(sp_full_name):].strip(" ,")[1:-1].replace('&quot;', '"')
                 edu_form, funding, category = new_part[new_part.find(inst_name):].split(", ")[1:4]
-                print(profile, edu_form, funding, category)
-                if profile == "" and not no_profile:
-                    no_profile = True
-                    print(competition_groups_search[inst_name][sp_code][funding][edu_form]['profiles'].keys())
-                    for prof in competition_groups_search[inst_name][sp_code][funding][edu_form]['profiles'].keys():
-                        if prof[0] not in profiles:
-                            profiles.append(prof[0])
-                if no_profile:
-                    if category != last_category:
-                        last_category = category
-                        profile_num = 0
+                title_inits = True
+            elif title_inits and line.startswith('<h4'):
+                new_part = line[line.find(">") + 1:-(len('</h4>'))].strip()
+                profile = new_part[new_part.find(":") + 1:].strip().replace('&quot;', '"')
+                try:
+                    id_group = competition_groups_search[inst_name][sp_code][funding][edu_form]['profiles'][
+                            (profile, category)]
+                except Exception as e:
+                    print("Исключение:", e, "на строке", line, "info", inst_name, sp_code, (profile, category),
+                          file=logout)
+                    return
 
-                    if profile_num < len(profiles):
-                        profile = profiles[profile_num]
-                    else:
-                        return
-                    while (profile, category) not in \
-                            competition_groups_search[inst_name][sp_code][funding][edu_form][
-                                'profiles']:
-                        profile_num += 1
-                        if profile_num < len(profiles):
-                            profile = profiles[profile_num]
-                        else:
-                            return
-                        #profile = profiles[-1] + " (на английском языке)"
-                    profile_num += 1
-                print(profile, edu_form, funding, category)
-
-                id_group = competition_groups_search[inst_name][sp_code][funding][edu_form]['profiles'][
-                    (profile, category)]
             elif line.startswith('</table>'):
                 is_table = False
             # elif line.startswith('<th>') and first_head:
@@ -162,8 +140,8 @@ def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id, competition
                 else:
                     ratings[-1][columns[0][col_num]] = value
                 col_num += 1
-        #except Exception as e:
-            #print("Исключение:", e, "на строке", line, "info", inst_name, sp_code, sp_full_name, site_id, file=logout)
+        except Exception as e:
+            print("Исключение:", e, "на строке", line, "info", inst_name, sp_code, sp_full_name, site_id, file=logout)
 
 
 def calculate_place(applicant_id, num_priority,
@@ -527,22 +505,22 @@ def main_parsing(logout):
     for group in data['competition_groups']:
         if group['specialty_code'][3:5] not in ['03', '04', '05']:
             continue
-        inst_name = group["institution_name"]
+        inst_name = group["institution_name"].strip()
         if inst_name not in competition_groups_search:                                  # 1
             competition_groups_search[inst_name] = {}
-        sp_code = group['specialty_code']
+        sp_code = group['specialty_code'].strip()
         if sp_code not in competition_groups_search[inst_name]:                         # 2
             competition_groups_search[inst_name][sp_code] = {}
-        funding = group["funding"]
+        funding = group["funding"].strip()
         if funding not in competition_groups_search[inst_name][sp_code]:                         # 3
             competition_groups_search[inst_name][sp_code][funding] = {}
-        edu_form = group["education_form"]
+        edu_form = group["education_form"].strip()
         if edu_form not in competition_groups_search[inst_name][sp_code][funding]:               # 4
             competition_groups_search[inst_name][sp_code][funding][edu_form] = {'site_id': specialities_on_site[sp_code],
                                                                                 'profiles': {}}
 
-        profile = group['profile']
-        category = group['category']
+        profile = group['profile'].strip()
+        category = group['category'].strip()
         if group['is_military']:
             category += " (Минобрнауки России)"
         competition_groups_search[inst_name][sp_code][funding][edu_form]['profiles'][(profile, category)] = group['id']
@@ -607,12 +585,12 @@ def main_parsing(logout):
     for group in data['competition_groups']:
         if group['id'] in competition_group_green_stacks:
             competition_groups[group['id']] = {
-                "specialty_code": group["specialty_code"],
-                "profile": group["profile"],
-                "institution_name": group["institution_name"],
-                "education_form": group["education_form"],
-                "funding": group["funding"],
-                "category": group["category"] +
+                "specialty_code": group["specialty_code"].strip(),
+                "profile": group["profile"].strip(),
+                "institution_name": group["institution_name"].strip(),
+                "education_form": group["education_form"].strip(),
+                "funding": group["funding"].strip(),
+                "category": group["category"].strip() +
                             (" (Минобрнауки России)" if group['is_military'] else "")
             }
 
