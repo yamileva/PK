@@ -52,7 +52,7 @@ def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id, competition
     if sp_code[3:5] != '04':
         params = {
             "institution": inst_name,
-            "funding": '',
+            "funding": 'Бюджетная основа',
             "education_level": "",
             'education_form': '',
             'specialty': site_id
@@ -62,7 +62,7 @@ def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id, competition
     else:
         params = {
             "institution": inst_name,
-            "funding": '',
+            "funding": 'Бюджетная основа',
             'education_form': '',
             'specialty': site_id
         }
@@ -79,14 +79,46 @@ def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id, competition
     col_num = 0
     id_group, category = "", ""
     # first_head = True
+    no_profile = False
+    profile_num = -1
+    profiles = []
+    last_category = ""
     for line in html_str:
-        try:
+        #try:
             line = line.strip()
             if line.startswith('<h3'):
                 is_table = True
                 new_part = line[line.find(">") + 1:-(len('</h3>'))]
                 profile = new_part[:new_part.find(inst_name)][len(sp_full_name):].strip(" ,")[1:-1].replace('&quot;', '"')
                 edu_form, funding, category = new_part[new_part.find(inst_name):].split(", ")[1:4]
+                print(profile, edu_form, funding, category)
+                if profile == "" and not no_profile:
+                    no_profile = True
+                    print(competition_groups_search[inst_name][sp_code][funding][edu_form]['profiles'].keys())
+                    for prof in competition_groups_search[inst_name][sp_code][funding][edu_form]['profiles'].keys():
+                        if prof[0] not in profiles:
+                            profiles.append(prof[0])
+                if no_profile:
+                    if category != last_category:
+                        last_category = category
+                        profile_num = 0
+
+                    if profile_num < len(profiles):
+                        profile = profiles[profile_num]
+                    else:
+                        return
+                    while (profile, category) not in \
+                            competition_groups_search[inst_name][sp_code][funding][edu_form][
+                                'profiles']:
+                        profile_num += 1
+                        if profile_num < len(profiles):
+                            profile = profiles[profile_num]
+                        else:
+                            return
+                        #profile = profiles[-1] + " (на английском языке)"
+                    profile_num += 1
+                print(profile, edu_form, funding, category)
+
                 id_group = competition_groups_search[inst_name][sp_code][funding][edu_form]['profiles'][
                     (profile, category)]
             elif line.startswith('</table>'):
@@ -130,8 +162,8 @@ def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id, competition
                 else:
                     ratings[-1][columns[0][col_num]] = value
                 col_num += 1
-        except Exception as e:
-            print("Исключение:", e, "на строке", line, "info", inst_name, sp_code, sp_full_name, site_id, file=logout)
+        #except Exception as e:
+            #print("Исключение:", e, "на строке", line, "info", inst_name, sp_code, sp_full_name, site_id, file=logout)
 
 
 def calculate_place(applicant_id, num_priority,
