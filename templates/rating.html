@@ -32,7 +32,7 @@
 
         <td>{{loop.index}}</td>
         <td>{{position}}</td>
-        <td><a href="/applicants/{{item[2]}}">{{item[2]}}</a></td>
+        <td><a href="/applicants/{{item[2]}}">{{item[4]}}</a></td>
         {% if item[1][0] == 500 %}
             {% set scoring = '-' %}
             {% set scoring1 = '-' %}
@@ -51,8 +51,8 @@
         <td>{{scoring2}}</td>
         <td>{{scoring3}}</td>
         <td>{{score_id}}</td>
-        <td>{{item[3]}}</td>
-        {% if item[4] %}
+        <td>{{item[2]}}</td>
+        {% if item[3] %}
             {% set original = 'Да' %}
         {% else %}
             {% set original = 'Нет' %}

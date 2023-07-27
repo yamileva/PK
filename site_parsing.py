@@ -3,43 +3,12 @@ import sys
 from datetime import datetime as dt
 # from pprint import pprint
 
-def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id, competition_groups_search, logout):
-    columns_on_site = ['№', 'Позиция', 'ID поступающего / СНИЛС', 'Балл', 'П1', 'П2', 'П3', 'ИД', 'Приоритет',
-                       'Подан оригинал', 'Статус', 'Примечание']
-    ex_ratings = {
-        "competition_group_id": "000000146",
-        "position": 45,
-        "rank": 0,
-        "applicant_id": "201-686-415 43",
-        "score_total": 10,
-        "score_average": 0,
-        "score_subject_1": 0,
-        "score_subject_2": 0,
-        "score_subject_3": 0,
-        "score_achievments": 10,
-        "original_submitted": False,
-        "consent_submitted": False,
-        "consent_count": 0,
-        "status": "",
-        "note": "",
-        "payment_made": False,
-        "priority": 2
-    }
+def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id,
+                 competition_groups_search, filtered_competition_groups, logout):
+
     import requests
     api_server_bach = "https://uust.ru/admission/bachelor-and-specialist/ratings/2023/"
     api_server_mag = "https://uust.ru/admission/master/ratings/2023/"
-
-    "https://uust.ru/admission/bachelor-and-specialist/ratings/2023/" \
-    "?institution=%D0%A3%D0%A3%D0%9D%D0%B8%D0%A2" \
-    "&funding=%D0%91%D1%8E%D0%B4%D0%B6%D0%B5%D1%82%D0%BD%D0%B0%D1%8F+%D0%BE%D1%81%D0%BD%D0%BE%D0%B2%D0%B0" \
-    "&education_level=" \
-    "&education_form=%D0%9E%D1%87%D0%BD%D0%B0%D1%8F" \
-    "&specialty=3"
-
-    "https://uust.ru/admission/master/ratings/2023/" \
-    "?funding=%D0%91%D1%8E%D0%B4%D0%B6%D0%B5%D1%82%D0%BD%D0%B0%D1%8F+%D0%BE%D1%81%D0%BD%D0%BE%D0%B2%D0%B0" \
-    "&education_form=%D0%9E%D1%87%D0%BD%D0%B0%D1%8F" \
-    "&specialty=174"
 
     columns_bach = [['№', 'position', 'applicant_id', 'score_total', 'score_subject_1', 'score_subject_2',
                      'score_subject_3', 'score_achievments', 'priority', 'original_submitted', 'status', 'note'],
@@ -98,13 +67,12 @@ def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id, competition
                     print("Исключение:", e, "на строке", line, "info", inst_name, sp_code, (profile, category),
                           file=logout)
                     return
-
             elif line.startswith('</table>'):
                 is_table = False
-            # elif line.startswith('<th>') and first_head:
-            # columns.append(line.lstrip('<th>').rstrip('</th>'))
-            # elif line.startswith('</thead>') and first_head:
-            # first_head = False
+            elif is_table and "Всего мест:" in line:
+                place_count = int(line[line.find(":") + 1:line.find(".")].strip())
+                filtered_competition_groups[id_group] = place_count
+
             elif is_table and line.startswith('<tr'):
                 col_num = 0
             elif is_table and line.startswith('<td'):
@@ -154,7 +122,7 @@ def calculate_place(applicant_id, num_priority,
     priority, gr_id, scoring, note = applicants[applicant_id]['competition_groups_priorities'][num_priority]
     if len(competition_group_green_stacks[gr_id]) == 0:
         if filtered_competition_groups[gr_id] == 0:
-            print("empty group", file=logout)
+            print("empty group", gr_id, file=logout)
             return calculate_place(applicant_id, num_priority + 1,
                     applicants, competition_group_green_stacks, filtered_competition_groups, logout)
         competition_group_green_stacks[gr_id].append((scoring, applicant_id, note))
@@ -224,7 +192,6 @@ def check_green_stacks(competition_group_green_stacks, filtered_competition_grou
             print("--app", doppelganger[gr_id], file=logout)
             print("--green", real_list, file=logout)
     print("applicants check is completed", file=logout)
-
 
 
 def calculate_ratings(ratings, filtered_competition_groups, special_competition_groups, logout):
@@ -304,10 +271,6 @@ def calculate_white_stacks(ratings, filtered_competition_groups):
     white_stacks = {}
     for group_id in filtered_competition_groups:
         white_stacks[group_id] = []
-    #for applicant_id in sorted(applicants, key=lambda x: applicants[x]['max_score_total'], reverse=True):
-     #   for m_priority, group_id, scoring, note in applicants[applicant_id]['competition_groups_priorities']:
-      #      if group_id != applicants[applicant_id]["consent"]:
-       #         white_stacks[group_id].append((scoring, applicant_id, note))
 
     applicants_json = {}
     for rating in ratings:
@@ -325,9 +288,10 @@ def calculate_white_stacks(ratings, filtered_competition_groups):
                     int(rating["score_subject_2"]),
                     int(rating["score_subject_3"])
                 ),
+                int(rating['priority']),
+                int(rating["original_submitted"]),
+
                 rating['applicant_id'],
-                rating['priority'],
-                rating["original_submitted"],
                 rating["note"]
             ))
             if rating['applicant_id'] in applicants_json:
@@ -366,7 +330,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups):
             """ modified_priority, group_id, scoring(5*int), consent, original, note """
 
     for group_id in filtered_competition_groups:
-        white_stacks[group_id].sort(reverse=True)
+        white_stacks[group_id].sort(reverse=True, key=lambda x: (x[0], x[1], -x[2], x[3]))
     for applicant_id in applicants_json:
         applicants_json[applicant_id].sort()
 
@@ -460,20 +424,7 @@ def main_parsing(logout):
         if group['competition_group_id'] in filtered_competition_groups.keys():
             filtered_competition_groups[group['competition_group_id']] = group['number']
 
-
-
-    ex_competition_groups = {
-        "id": "000000001",
-        "specialty_code": "01.03.02",                       # 2
-        "profile": "Прикладная математика и информатика",   # 5
-        "institution_name": "УУНиТ",                        # 1
-        "education_form": "Очная",                          # 4
-        "budget_level": "Федеральный бюджет",               # -
-        "funding": "Бюджетная основа",                      # 3
-        "category": "Общая",                                # 6
-        "is_military": False,
-        "language_code": ""}
-
+    # извлечение списка направлений из страницы - из выпадающего списка, в т.ч. полное название и номер для запроса
     specialities_on_site = {}
     specialities_full_names = {}
     with open("init_data/example_init_bach.htm", 'r', encoding="utf-8") as html_ex:
@@ -490,6 +441,7 @@ def main_parsing(logout):
                     fullname = line.split("<")[1].split(">")[1]
                     specialities_full_names[p_line[1]] = fullname
 
+    # извлечение списка направлений из страницы - из выпадающего списка, в т.ч. полное название и номер для запроса
     with open("init_data/example_init_mag.htm", 'r', encoding="utf-8") as html_ex:
         is_sp_found = False
         for line in html_ex:
@@ -504,6 +456,7 @@ def main_parsing(logout):
                     fullname = line.split("<")[1].split(">")[1]
                     specialities_full_names[p_line[1]] = fullname
 
+    # извлечение направлений с категориями из init.json, в т.ч. идентификационного номера пары и профилей
     competition_groups_search = {}
     for group in data['competition_groups']:
         if group['specialty_code'][3:5] not in ['03', '04', '05']:
@@ -553,7 +506,7 @@ def main_parsing(logout):
         for sp_code in competition_groups_search[inst_name]:
             site_id = specialities_on_site[sp_code]
             site_reading(ratings, inst_name, sp_code, specialities_full_names[sp_code], site_id,
-                         competition_groups_search, logout)
+                         competition_groups_search, filtered_competition_groups, logout)
 
     print(dt.now(), "ratings are created with len", len(ratings), file=logout)
 
