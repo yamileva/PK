@@ -9989,6 +9989,18 @@
 "language_code": ""
 },
 {
+"id": "000001123",
+"specialty_code": "09.03.01",
+"profile": "Информатика и вычислительная техника",
+"institution_name": "УУНиТ",
+"education_form": "Очная",
+"budget_level": "Федеральный бюджет",
+"funding": "Бюджетная основа",
+"category": "Целевая",
+"is_military": true,
+"language_code": ""
+},
+{
 "id": "000000124",
 "specialty_code": "09.03.01",
 "profile": "Информатика и вычислительная техника",
@@ -11392,6 +11404,18 @@
 "is_military": false,
 "language_code": ""
 },
+  {
+"id": "000011156",
+"specialty_code": "10.03.01",
+"profile": "Безопасность автоматизированных систем (по отрасли или в сфере профессиональной деятельности)",
+"institution_name": "УУНиТ",
+"education_form": "Очная",
+"budget_level": "Федеральный бюджет",
+"funding": "Бюджетная основа",
+"category": "Целевая",
+"is_military": true,
+"language_code": ""
+},
 {
 "id": "000000157",
 "specialty_code": "10.03.01",
@@ -11834,6 +11858,18 @@
 "funding": "Бюджетная основа",
 "category": "Целевая",
 "is_military": false,
+"language_code": ""
+},
+{
+"id": "000011166",
+"specialty_code": "11.03.02",
+"profile": "Цифровизация, автоматизация и связь",
+"institution_name": "УУНиТ",
+"education_form": "Очная",
+"budget_level": "Федеральный бюджет",
+"funding": "Бюджетная основа",
+"category": "Целевая",
+"is_military": true,
 "language_code": ""
 },
 {
@@ -20090,6 +20126,18 @@
 "funding": "Бюджетная основа",
 "category": "Целевая",
 "is_military": false,
+"language_code": ""
+},
+{
+"id": "000011451",
+"specialty_code": "40.03.01",
+"profile": "Юрист общей практики",
+"institution_name": "УУНиТ",
+"education_form": "Очная",
+"budget_level": "Федеральный бюджет",
+"funding": "Бюджетная основа",
+"category": "Целевая",
+"is_military": true,
 "language_code": ""
 },
 {
@@ -29747,6 +29795,10 @@
 "number": 10
 },
 {
+"competition_group_id": "000001123",
+"number": 1
+},
+{
 "competition_group_id": "000000124",
 "number": 25
 },
@@ -30214,6 +30266,10 @@
 "competition_group_id": "000000156",
 "number": 17
 },
+  {
+"competition_group_id": "000011156",
+"number": 1
+},
 {
 "competition_group_id": "000001191",
 "number": 1
@@ -30413,6 +30469,10 @@
 {
 "competition_group_id": "000000166",
 "number": 2
+},
+{
+"competition_group_id": "000011166",
+"number": 1
 },
 {
 "competition_group_id": "000001192",
@@ -33169,6 +33229,10 @@
 {
 "competition_group_id": "000000451",
 "number": 6
+},
+{
+"competition_group_id": "000011451",
+"number": 1
 },
 {
 "competition_group_id": "000001193",

@@ -105,9 +105,9 @@ def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id, competition
             # columns.append(line.lstrip('<th>').rstrip('</th>'))
             # elif line.startswith('</thead>') and first_head:
             # first_head = False
-            elif is_table and line.startswith('<tr>'):
+            elif is_table and line.startswith('<tr'):
                 col_num = 0
-            elif is_table and line.startswith('<td>'):
+            elif is_table and line.startswith('<td'):
                 if col_num >= len(columns[0]):
                     print(sp_code, col_num, line, file=logout)
                     col_num = 0
@@ -402,7 +402,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups):
     '''
 
 
-def print_out(datenow, competition_groups, competition_group_green_stacks, filtered_competition_groups):
+def print_out(datenow, competition_groups, competition_group_green_stacks, filtered_competition_groups, competition_group_white_stacks):
     with open('result_data/' + datenow + "_lists.out", 'w', encoding="utf-8") as outfile:
         for group_id in competition_group_green_stacks:
             # print(f"group {group_id}, ", file=outfile)
@@ -426,9 +426,9 @@ def print_out(datenow, competition_groups, competition_group_green_stacks, filte
 
     with open('result_data/' + datenow + "_brief.csv", 'w', encoding="utf-8") as outfile:
         print("specialty_code", "profile", "institution_name", "education_form", "funding", "category",
-              'plan_places', "current_places", "fraction", sep=';', file=outfile)
+              'plan_places', "current_places", "fraction", "ratings", "originals", sep=';', file=outfile)
         for group_id in competition_group_green_stacks:
-            print("Sp " + competition_groups[group_id]["specialty_code"],
+            print("'"+competition_groups[group_id]["specialty_code"],
                   competition_groups[group_id]["profile"],
                   competition_groups[group_id]["institution_name"],
                   competition_groups[group_id]["education_form"],
@@ -438,7 +438,10 @@ def print_out(datenow, competition_groups, competition_group_green_stacks, filte
                   len(competition_group_green_stacks[group_id]),
                   0 if filtered_competition_groups[group_id] == 0
                   else len(competition_group_green_stacks[group_id]) / filtered_competition_groups[group_id],
+                  len(competition_group_white_stacks[group_id]),
+                  sum([1 if item[4] else 0 for item in competition_group_white_stacks[group_id]]),
                   sep=';', file=outfile)
+
 
 def main_parsing(logout):
     print("Begin in", dt.now(), file=logout)
@@ -604,7 +607,8 @@ def main_parsing(logout):
         json.dump(json_stacks, writefile, ensure_ascii=False, indent=0)
 
     if __name__ == "__main__":
-        print_out(datenow, competition_groups, competition_group_green_stacks, filtered_competition_groups)
+        print_out(datenow, competition_groups, competition_group_green_stacks, filtered_competition_groups,
+                  competition_group_white_stacks)
 
     print(dt.now(), "ratings with greens are written", file=logout)
     return datenow
