@@ -3,6 +3,7 @@ import sys
 from datetime import datetime as dt
 # from pprint import pprint
 
+
 def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id,
                  competition_groups_search, filtered_competition_groups, logout):
 
@@ -124,14 +125,14 @@ def calculate_place(applicant_id, num_priority,
         if filtered_competition_groups[gr_id] == 0:
             print("empty group", gr_id, file=logout)
             return calculate_place(applicant_id, num_priority + 1,
-                    applicants, competition_group_green_stacks, filtered_competition_groups, logout)
+                                   applicants, competition_group_green_stacks, filtered_competition_groups, logout)
         competition_group_green_stacks[gr_id].append((scoring, applicant_id, note))
         applicants[applicant_id]["consent"] = gr_id
         return "ok"
     elif scoring < competition_group_green_stacks[gr_id][-1][0]:
         if len(competition_group_green_stacks[gr_id]) == filtered_competition_groups[gr_id]:
             return calculate_place(applicant_id, num_priority + 1,
-                    applicants, competition_group_green_stacks, filtered_competition_groups, logout)
+                                   applicants, competition_group_green_stacks, filtered_competition_groups, logout)
         else:
             competition_group_green_stacks[gr_id].append((scoring, applicant_id, note))
             applicants[applicant_id]["consent"] = gr_id
@@ -139,9 +140,9 @@ def calculate_place(applicant_id, num_priority,
     else:
         competition_group_green_stacks[gr_id].append((scoring, applicant_id, note))
         competition_group_green_stacks[gr_id].sort(reverse=True)
-        #for place in range(len(competition_group_green_stacks[gr_id]) - 1, -2, -1):
+        # for place in range(len(competition_group_green_stacks[gr_id]) - 1, -2, -1):
         #    if place == -1 or scoring < competition_group_green_stacks[gr_id][place][0]:
-       #         competition_group_green_stacks[gr_id].insert(place + 1, (scoring, applicant_id))
+        #        competition_group_green_stacks[gr_id].insert(place + 1, (scoring, applicant_id))
         applicants[applicant_id]["consent"] = gr_id
 
         if len(competition_group_green_stacks[gr_id]) > filtered_competition_groups[gr_id]:
@@ -337,35 +338,6 @@ def calculate_white_stacks(ratings, filtered_competition_groups):
     return white_stacks, applicants_json
 
 
-    '''
-    applicants[applicant_id] = {
-        'max_score_total': int,
-        'score_totals': [int,...int]
-        'competition_groups_priorities': [(modified_priority, competition_group_id, scoring:(int, int, int, int, int)]
-        "consent": "fail" | '' | group_id
-    }
-
-    ratings = [{
-                        'competition_group_id': id_group,
-                        "position": 0,
-                        "rank": 0,
-                        "applicant_id": "",
-                        "score_total": 0,
-                        "score_average": 0,
-                        "score_subject_1": 0,
-                        "score_subject_2": 0,
-                        "score_subject_3": 0,
-                        "score_achievments": 0,
-                        "original_submitted": False,
-                        "consent_submitted": False,
-                        "consent_count": 0,
-                        "status": "",
-                        "note": "",
-                        "priority": 100
-                    }...]
-    '''
-
-
 def print_out(datenow, competition_groups, competition_group_green_stacks, filtered_competition_groups, competition_group_white_stacks):
     with open('result_data/' + datenow + "_lists.out", 'w', encoding="utf-8") as outfile:
         for group_id in competition_group_green_stacks:
@@ -403,7 +375,7 @@ def print_out(datenow, competition_groups, competition_group_green_stacks, filte
                   0 if filtered_competition_groups[group_id] == 0
                   else len(competition_group_green_stacks[group_id]) / filtered_competition_groups[group_id],
                   len(competition_group_white_stacks[group_id]),
-                  sum([1 if item[4] else 0 for item in competition_group_white_stacks[group_id]]),
+                  sum([item[3] for item in competition_group_white_stacks[group_id]]),
                   sep=';', file=outfile)
 
 
@@ -482,7 +454,7 @@ def main_parsing(logout):
         competition_groups_search[inst_name][sp_code][funding][edu_form]['profiles'][(profile, category)] = group['id']
 
     print(dt.now(), "dicts are created", file=logout)
-    #'''
+    # '''
 
     ratings = []
     '''
@@ -498,12 +470,7 @@ def main_parsing(logout):
     # pprint(ratings)
 
     for inst_name in competition_groups_search:
-        #for funding in competition_groups_search[inst_name]:
-            #for edu_form in competition_groups_search[inst_name][funding]:
-                #for sp_code in competition_groups_search[inst_name][funding][edu_form]:
-                    #site_id = competition_groups_search[inst_name][funding][edu_form][sp_code]['site_id']
-
-        for sp_code in competition_groups_search[inst_name]:
+       for sp_code in competition_groups_search[inst_name]:
             site_id = specialities_on_site[sp_code]
             site_reading(ratings, inst_name, sp_code, specialities_full_names[sp_code], site_id,
                          competition_groups_search, filtered_competition_groups, logout)
@@ -533,9 +500,9 @@ def main_parsing(logout):
 
     competition_group_white_stacks, applicants_json = calculate_white_stacks(ratings, filtered_competition_groups)
 
-    #data['ratings'] = ratings
-    #with open("result_data/ratings_green.json", mode="w", encoding="utf-8") as writefile:
-        #json.dump(data, writefile, ensure_ascii=False, indent=0)
+    # data['ratings'] = ratings
+    # with open("result_data/ratings_green.json", mode="w", encoding="utf-8") as writefile:
+        # json.dump(data, writefile, ensure_ascii=False, indent=0)
 
     competition_groups = {}   # info by group_id
     for group in data['competition_groups']:
@@ -550,7 +517,7 @@ def main_parsing(logout):
                             (" (Минобрнауки России)" if group['is_military'] else "")
             }
 
-    #applicants_json = {applicant_id: [(item[0], item[1], item[2], applicants[applicant_id]['consent'] == item[1])
+    # applicants_json = {applicant_id: [(item[0], item[1], item[2], applicants[applicant_id]['consent'] == item[1])
     #                                  for item in applicants[applicant_id]['competition_groups_priorities']]
     #                   for applicant_id in applicants}
     """ modified_priority, group_id, scoring(5*int), consent """
@@ -570,4 +537,3 @@ def main_parsing(logout):
 if __name__ == "__main__":
     logout = sys.stdout
     main_parsing(logout)
-
