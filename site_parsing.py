@@ -72,7 +72,7 @@ def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id,
                 is_table = False
             elif is_table and "Всего мест:" in line:
                 place_count = int(line[line.find(":") + 1:line.find(".")].strip())
-                filtered_competition_groups[id_group] = place_count
+                # filtered_competition_groups[id_group] = place_count
 
             elif is_table and line.startswith('<tr'):
                 col_num = 0
@@ -167,7 +167,8 @@ def check_green_stacks(competition_group_green_stacks, filtered_competition_grou
             print(f"Intersection exists in {gr_id}: {all_applicants.intersection(gr_applicants)}", file=logout)
         all_applicants = all_applicants.union(gr_applicants)
         if len(gr_applicants) < len(competition_group_green_stacks[gr_id]):
-            print(f"Repeat in {gr_id}: {len(gr_applicants)} < {len(competition_group_green_stacks[gr_id])}", file=logout)
+            print(f"Repeat in {gr_id}: {len(gr_applicants)} < {len(competition_group_green_stacks[gr_id])}",
+                  file=logout)
             for item in competition_group_green_stacks[gr_id]:
                 if competition_group_green_stacks[gr_id].count(item) > 1:
                     print("---", item, competition_group_green_stacks[gr_id].count(item), 'times', file=logout)
@@ -195,12 +196,23 @@ def check_green_stacks(competition_group_green_stacks, filtered_competition_grou
     print("applicants check is completed", file=logout)
 
 
-def calculate_ratings(ratings, filtered_competition_groups, special_competition_groups, logout):
+def calculate_ratings(ratings, filtered_competition_groups, special_competition_groups,
+                      granted, not_common_groups_to_common, logout):
     applicants = {}
 
     for rating in ratings:
         try:
             if rating['competition_group_id'] not in filtered_competition_groups:
+                continue
+            if rating["status"] == 'Зачислен':
+                granted.append(rating['applicant_id'])
+                rating['priority'] = 0
+                rating['note'] += ' Зачислен'
+                if rating['competition_group_id'] in filtered_competition_groups:
+                    if rating['competition_group_id'] in not_common_groups_to_common:
+                        filtered_competition_groups[not_common_groups_to_common[rating['competition_group_id']]] -= 1
+                    else:
+                        filtered_competition_groups[rating['competition_group_id']] -= 1
                 continue
             if not rating["original_submitted"]:
                 continue
@@ -255,9 +267,8 @@ def calculate_ratings(ratings, filtered_competition_groups, special_competition_
     for key in applicants:
         applicants[key]['competition_groups_priorities'].sort(key=lambda x: (-x[0], x[2], x[1]), reverse=True)
 
-    competition_group_green_stacks = {}
-    for group_id in filtered_competition_groups:
-        competition_group_green_stacks[group_id] = []
+    competition_group_green_stacks = {group_id: [] for group_id in filtered_competition_groups
+                                      if group_id not in not_common_groups_to_common}
 
     for applicant_id in sorted(applicants, key=lambda x: applicants[x]['max_score_total'], reverse=True):
         result = calculate_place(applicant_id, 0,
@@ -268,18 +279,19 @@ def calculate_ratings(ratings, filtered_competition_groups, special_competition_
     return applicants, competition_group_green_stacks
 
 
-def calculate_white_stacks(ratings, filtered_competition_groups):
-    white_stacks = {}
-    for group_id in filtered_competition_groups:
-        white_stacks[group_id] = []
+def calculate_white_stacks(ratings, filtered_competition_groups, not_common_groups_to_common, granted):
+    white_stacks = {group_id: [] for group_id in filtered_competition_groups
+                    if group_id not in not_common_groups_to_common}
 
     applicants_json = {}
     for rating in ratings:
         group_id = rating["competition_group_id"]
         modified_total_score = int(rating["score_total"])
+        if rating['applicant_id'] in granted:
+            continue
         if rating['note'] == "Без вступительных испытаний":
             modified_total_score = 500
-        if group_id in filtered_competition_groups:
+        if group_id in white_stacks:
             white_stacks[group_id].append((
                 int(rating["consent_submitted"]),
                 (
@@ -330,7 +342,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups):
 
             """ modified_priority, group_id, scoring(5*int), consent, original, note """
 
-    for group_id in filtered_competition_groups:
+    for group_id in white_stacks:
         white_stacks[group_id].sort(reverse=True, key=lambda x: (x[0], x[1], -x[2], x[3]))
     for applicant_id in applicants_json:
         applicants_json[applicant_id].sort()
@@ -338,7 +350,8 @@ def calculate_white_stacks(ratings, filtered_competition_groups):
     return white_stacks, applicants_json
 
 
-def print_out(datenow, competition_groups, competition_group_green_stacks, filtered_competition_groups, competition_group_white_stacks):
+def print_out(datenow, competition_groups, competition_group_green_stacks, filtered_competition_groups,
+              competition_group_white_stacks):
     with open('result_data/' + datenow + "_lists.out", 'w', encoding="utf-8") as outfile:
         for group_id in competition_group_green_stacks:
             # print(f"group {group_id}, ", file=outfile)
@@ -350,7 +363,8 @@ def print_out(datenow, competition_groups, competition_group_green_stacks, filte
                   competition_groups[group_id]["category"],
                   sep=', ', file=outfile)
             print(
-                f"План {filtered_competition_groups[group_id]} мест, текущая заполненность {len(competition_group_green_stacks[group_id])}",
+                f"План {filtered_competition_groups[group_id]} мест, "
+                f"текущая заполненность {len(competition_group_green_stacks[group_id])}",
                 file=outfile)
             for i in range(len(competition_group_green_stacks[group_id])):
                 print(
@@ -392,6 +406,16 @@ def main_parsing(logout):
                                   for group in data['competition_groups']
                                   if group['specialty_code'][3:5] in ['03', '04', '05'] and
                                   group['funding'] == "Бюджетная основа"}
+    not_common_group_id_to_name, common_group_name_to_id = {}, {}
+    for group in data['competition_groups']:
+        if group["id"] in filtered_competition_groups:
+            if group["category"] != 'Общая':
+                not_common_group_id_to_name[group["id"]] = group['specialty_code']
+            else:
+                common_group_name_to_id[group['specialty_code']] = group["id"]
+    not_common_groups_to_common = {group_id: common_group_name_to_id[not_common_group_id_to_name[group_id]]
+                                   for group_id in not_common_group_id_to_name}
+
     for group in data['admission_plans']:
         if group['competition_group_id'] in filtered_competition_groups.keys():
             filtered_competition_groups[group['competition_group_id']] = group['number']
@@ -444,8 +468,8 @@ def main_parsing(logout):
             competition_groups_search[inst_name][sp_code][funding] = {}
         edu_form = group["education_form"].strip()
         if edu_form not in competition_groups_search[inst_name][sp_code][funding]:               # 4
-            competition_groups_search[inst_name][sp_code][funding][edu_form] = {'site_id': specialities_on_site[sp_code],
-                                                                                'profiles': {}}
+            competition_groups_search[inst_name][sp_code][funding][edu_form] = {
+                'site_id': specialities_on_site[sp_code], 'profiles': {}}
 
         profile = group['profile'].strip()
         category = group['category'].strip()
@@ -488,8 +512,10 @@ def main_parsing(logout):
         ratings = json.load(writefile)
     datenow = dt.now().strftime("%m.%d..%H.%M")
     '''
+    granted = []
     applicants, competition_group_green_stacks = calculate_ratings(ratings, filtered_competition_groups,
-                                                                   special_competition_groups, logout)
+                                                                   special_competition_groups, granted,
+                                                                   not_common_groups_to_common, logout)
     print(dt.now(), "ratings with greens are calculated", file=logout)
 
     for rating_id in range(len(ratings)):
@@ -498,7 +524,8 @@ def main_parsing(logout):
                 applicants[ratings[rating_id]["applicant_id"]]["consent"]:
             ratings[rating_id]["consent_submitted"] = True
 
-    competition_group_white_stacks, applicants_json = calculate_white_stacks(ratings, filtered_competition_groups)
+    competition_group_white_stacks, applicants_json = calculate_white_stacks(ratings, filtered_competition_groups,
+                                                                             not_common_groups_to_common, granted)
 
     # data['ratings'] = ratings
     # with open("result_data/ratings_green.json", mode="w", encoding="utf-8") as writefile:
