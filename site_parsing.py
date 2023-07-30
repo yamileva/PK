@@ -10,6 +10,10 @@ def main_parsing(logout):
     with open("init_data/" + json_name, encoding="utf-8") as jsonfile:
         data = json.load(jsonfile)
 
+    all_competition_groups = {group["id"]: 0 for group in data['competition_groups']
+                              if group['specialty_code'][3:5] in ['03', '04', '05'] and
+                              group['funding'] == "Бюджетная основа" }
+
     filtered_competition_groups = {group["id"]: 0 for group in data['competition_groups']
                                    if (group['specialty_code'][3:5] in ['03', '05'] and
                                    group['funding'] == "Бюджетная основа" and group['category'] == "Общая") or
@@ -422,12 +426,12 @@ def calculate_ratings(ratings, filtered_competition_groups, special_competition_
 
     for rating in ratings:
         try:
-            if rating['competition_group_id'] not in filtered_competition_groups:
-                continue
             if rating["status"] == 'Зачислен':
                 granted.append(rating['applicant_id'])
                 if rating["applicant_id"] in applicants:
                     del applicants[rating["applicant_id"]]
+                continue
+            if rating['competition_group_id'] not in filtered_competition_groups:
                 continue
             if not rating["original_submitted"]:
                 continue

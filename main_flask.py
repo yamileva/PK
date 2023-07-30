@@ -22,6 +22,11 @@ def favicon():
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 
+@app.route('/robots.txt')
+def robots():
+    return ""
+
+
 def site_parse():
     global last_update_dt
     while True:
