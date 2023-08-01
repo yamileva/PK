@@ -35,7 +35,9 @@ def site_parse():
             with open(log_name, "a", encoding="utf-8") as logout:
                 print("Update on", dt.datetime.now(), "last", last_update, file=logout)
                 try:
-                    last_update_dt = main_parsing(logout)
+                    result = main_parsing(logout)
+                    if result is not None:
+                        last_update_dt = result
                 except Exception as e:
                     print("Exception", e, file=logout)
         time.sleep(30)

@@ -161,7 +161,7 @@ def main_parsing(logout):
         competition_groups_search[inst_name][sp_code][funding][edu_form]['profiles'][(profile, category)] = group['id']
 
     print(dt.now(), "dicts are created", file=logout)
-    # '''
+
 
     ratings = []
 
@@ -171,11 +171,19 @@ def main_parsing(logout):
     # sp_code, specialities_full_names[sp_code], site_id, competition_groups_search)
     # pprint(ratings)
 
+    # '''  for reading instead site parsing
     for inst_name in competition_groups_search:
         for sp_code in competition_groups_search[inst_name]:
             site_id = specialities_on_site[sp_code]
-            site_reading(ratings, inst_name, sp_code, specialities_full_names[sp_code], site_id,
-                         competition_groups_search, filtered_competition_groups, logout)
+            try:
+                result = site_reading(ratings, inst_name, sp_code, specialities_full_names[sp_code], site_id,
+                                      competition_groups_search, filtered_competition_groups, logout)
+                if result == 500:
+                    return
+            except:
+                print("exception: responce error", file=logout)
+                return
+
 
     print(dt.now(), "ratings are created with len", len(ratings), file=logout)
 
@@ -186,7 +194,7 @@ def main_parsing(logout):
 
     '''
     #calculate_ratings(data['ratings'], filtered_competition_groups, special_competition_groups)
-    with open("result_data/07.24..13.09_ratings.json", mode="r", encoding="utf-8") as writefile:
+    with open("result_data/ratings.json", mode="r", encoding="utf-8") as writefile:
         ratings = json.load(writefile)
     datenow = dt.now().strftime("%m.%d..%H.%M")
     '''
@@ -195,6 +203,11 @@ def main_parsing(logout):
                                                                    special_competition_groups, mag_goal_to_common,
                                                                    granted, logout)
     print(dt.now(), "ratings with greens are calculated", file=logout)
+    with open("result_data/granted.txt", mode='w', encoding="utf-8") as writefile:
+        print(*granted, sep="\n", file=writefile)
+
+    with open("result_data/greens.txt", mode='w', encoding="utf-8") as writefile:
+        print(competition_group_green_stacks, file=writefile)
 
     for rating_id in range(len(ratings)):
         if ratings[rating_id]["applicant_id"] in applicants and \
@@ -204,6 +217,12 @@ def main_parsing(logout):
 
     competition_group_white_stacks, applicants_json = calculate_white_stacks(ratings, filtered_competition_groups,
                                                                              granted)
+
+    with open("result_data/whites.txt", mode='w', encoding="utf-8") as writefile:
+        print(competition_group_white_stacks, file=writefile)
+
+    with open("result_data/granted_after.txt", mode='w', encoding="utf-8") as writefile:
+        print(*granted, sep="\n", file=writefile)
 
     # data['ratings'] = ratings
     # with open("result_data/ratings_green.json", mode="w", encoding="utf-8") as writefile:
@@ -265,7 +284,7 @@ def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id,
     response = requests.get(api_server, params=params)
     if not response:
         print("response error", file=logout)
-        return
+        return 500
 
     # print(response.url, file=logout)
     html_str = response.content.decode(encoding='utf-8', errors='strict').split('\n')
@@ -278,10 +297,11 @@ def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id,
         try:
             line = line.strip()
             if line.startswith('<h3'):
-                is_table = True
                 new_part = line[line.find(">") + 1:-(len('</h3>'))]
-                edu_form, funding, category = new_part[new_part.find(inst_name):].split(", ")[1:4]
-                title_inits = True
+                if new_part and new_part[0].isdigit():
+                    is_table = True
+                    edu_form, funding, category = new_part[new_part.find(inst_name):].split(", ")[1:4]
+                    title_inits = True
             elif title_inits and line.startswith('<h4'):
                 new_part = line[line.find(">") + 1:-(len('</h4>'))].strip()
                 profile = new_part[new_part.find(":") + 1:].strip().replace('&quot;', '"')
@@ -405,6 +425,9 @@ def check_green_stacks(competition_group_green_stacks, filtered_competition_grou
     print("competition_group_green_stacks check is completed", file=logout)
     doppelganger = {}
     for app_id in applicants:
+        if "consent" not in applicants[app_id]:
+            print("no consent", app_id)
+            continue
         if applicants[app_id]["consent"] not in ["fail", '']:
             gr_id = applicants[app_id]["consent"]
             if gr_id not in doppelganger:
@@ -431,8 +454,11 @@ def calculate_ratings(ratings, filtered_competition_groups, special_competition_
                 if rating["applicant_id"] in applicants:
                     del applicants[rating["applicant_id"]]
                 continue
+            if rating["applicant_id"] in granted:
+                continue
             if rating['competition_group_id'] not in filtered_competition_groups:
                 continue
+
             if not rating["original_submitted"]:
                 continue
 
@@ -489,16 +515,21 @@ def calculate_ratings(ratings, filtered_competition_groups, special_competition_
     competition_group_green_stacks = {group_id: [] for group_id in filtered_competition_groups}
 
     for applicant_id in sorted(applicants, key=lambda x: applicants[x]['max_score_total'], reverse=True):
+        if applicant_id in granted:
+            continue
         if any([item[1] in mag_goal_to_common for item in applicants[applicant_id]['competition_groups_priorities']]):
-            result = calculate_place(applicant_id, 0,
-                                     applicants, competition_group_green_stacks, filtered_competition_groups, logout)
+            calculate_place(applicant_id, 0,
+                            applicants, competition_group_green_stacks, filtered_competition_groups, logout)
     for group_id in mag_goal_to_common:
         if len(competition_group_green_stacks[group_id]) > 0:
             # print("Целевая", group_id, competition_group_green_stacks[group_id], file=logout)
             filtered_competition_groups[mag_goal_to_common[group_id]] -= len(competition_group_green_stacks[group_id])
 
-    competition_group_green_stacks = {group_id: [] for group_id in filtered_competition_groups}
+    for group_id in competition_group_green_stacks:
+        competition_group_green_stacks[group_id].clear()
     for applicant_id in sorted(applicants, key=lambda x: applicants[x]['max_score_total'], reverse=True):
+        if applicant_id in granted:
+            continue
         applicants[applicant_id]["consent"] = ""
         result = calculate_place(applicant_id, 0,
                                  applicants, competition_group_green_stacks, filtered_competition_groups, logout)
