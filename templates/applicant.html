@@ -37,7 +37,7 @@
         <tr class={{class_name}}>
 
         <td>{{loop.index}}</td>
-        <td>{{name}}</td>
+        <td><a href="/{{group_id}}">{{name}}</a></td>
         <td>{{app_id}}</td>
         {% if item[2][0] == 500 %}
             {% set scoring = '-' %}

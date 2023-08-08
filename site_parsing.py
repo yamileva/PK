@@ -180,8 +180,8 @@ def main_parsing(logout):
                                       competition_groups_search, filtered_competition_groups, logout)
                 if result == 500:
                     return
-            except:
-                print("exception: responce error", file=logout)
+            except Exception as e:
+                print("exception on response", e, file=logout)
                 return
 
 
@@ -470,6 +470,10 @@ def calculate_ratings(ratings, filtered_competition_groups, special_competition_
             #    modified_total_score = 500
             else:
                 modified_priority = int(rating['priority']) + 100
+            if int(rating["score_subject_1"]) == 0 or \
+                    int(rating["score_subject_2"]) == 0 or \
+                    int(rating["score_subject_3"]) == 0:
+                modified_priority += 1000
             if rating["applicant_id"] not in applicants:
                 applicants[rating["applicant_id"]] = {
                     'max_score_total': modified_total_score,
@@ -550,7 +554,15 @@ def calculate_white_stacks(ratings, filtered_competition_groups, granted):
             continue
         # if rating['note'] == "Без вступительных испытаний":
         #     modified_total_score = 500
+
         if group_id in white_stacks:
+            """
+            if int(rating["score_subject_1"]) == 0 or \
+                    int(rating["score_subject_2"]) == 0 or \
+                    int(rating["score_subject_3"]) == 0:
+                print("Wrong score", rating['applicant_id'], int(rating["score_subject_1"]),
+                      int(rating["score_subject_2"]), int(rating["score_subject_3"]))
+            """
             white_stacks[group_id].append((
                 int(rating["consent_submitted"]),
                 (
@@ -560,7 +572,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups, granted):
                     int(rating["score_subject_2"]),
                     int(rating["score_subject_3"])
                 ),
-                int(rating['priority']),
+                int(rating['priority']) if rating['priority'] != "" else 0,
                 int(rating["original_submitted"]),
 
                 rating['applicant_id'],
@@ -568,7 +580,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups, granted):
             ))
             if rating['applicant_id'] in applicants_json:
                 applicants_json[rating['applicant_id']].append((
-                    rating['priority'],
+                    int(rating['priority']) if rating['priority'] != "" else 0,
                     group_id,
                     (
                         modified_total_score,
@@ -584,7 +596,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups, granted):
                 ))
             else:
                 applicants_json[rating['applicant_id']] = [(
-                    rating['priority'],
+                    int(rating['priority']) if rating['priority'] != "" else 0,
                     group_id,
                     (
                         modified_total_score,
