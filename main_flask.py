@@ -11,9 +11,15 @@ from site_parsing import main_parsing
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ONF UGATU forever'
-last_update_dt = '07.25..12.24'
+last_update_dt = '08.14..00.31'
 parse_interval = 5
 log_name = "log.out"
+
+try:
+    with open("init_data/ours.json", mode="r", encoding="utf-8") as json_file:
+        ours = json.load(json_file)
+except Exception:
+    ours = {}
 
 
 @app.route('/favicon.ico')
@@ -56,6 +62,17 @@ def all_rating():
                            load_time=last_update_dt)
 
 
+@app.route('/master')
+@app.route('/index/master')
+def all_rating_master():
+    with open("result_data/ratings_stacks.json", mode="r", encoding="utf-8") as stacks_file:
+        stacks = json.load(stacks_file)
+    return render_template('all_rating_mag.html', stacks=stacks,
+                           title="Статистика по направлениям УУНиТ",
+                           header="Статистика по направлениям",
+                           load_time=last_update_dt)
+
+
 @app.route('/<group_id>')
 @app.route('/index/<group_id>')
 def rating(group_id):
@@ -70,7 +87,7 @@ def rating(group_id):
     return render_template('rating.html', group_id=group_id, stacks=stacks,
                            title="Статистика по направлениям УУНиТ",
                            header="Статистика по направлению\n" + header,
-                           load_time=last_update_dt)
+                           load_time=last_update_dt, ours=ours)
 
 
 @app.route('/applicants/<app_id>')
@@ -79,6 +96,8 @@ def applicant(app_id):
     with open("result_data/ratings_stacks.json", mode="r", encoding="utf-8") as stacks_file:
         stacks = json.load(stacks_file)
     header = app_id
+    if app_id in ours:
+        header += "(" + ours[app_id] + ")"
     return render_template('applicant.html', app_id=app_id, stacks=stacks,
                            title="Статистика по направлениям УУНиТ",
                            header="Информация по поступающему \n" + header,

@@ -259,9 +259,9 @@ def site_reading(ratings, inst_name, sp_code, sp_full_name, site_id,
                     ['№', 'position', 'applicant_id', 'score_total', 'score_subject_1', 'score_subject_2',
                      'score_subject_3', 'score_achievments', 'priority', 'original_submitted', 'status', 'payment_made']]
     columns_mag = [['№', 'position', 'applicant_id', 'score_total', 'score_subject_1', 'score_achievments',
-                    'priority', 'original_submitted', 'note'],
+                    'priority', 'original_submitted', 'status', 'note'],
                    ['№', 'position', 'applicant_id', 'score_total', 'score_subject_1', 'score_achievments',
-                    'priority', 'original_submitted', 'payment_made']]
+                    'priority', 'original_submitted', 'status', 'payment_made']]
     if sp_code[3:5] != '04':
         params = {
             "institution": inst_name,
@@ -449,6 +449,9 @@ def calculate_ratings(ratings, filtered_competition_groups, special_competition_
 
     for rating in ratings:
         try:
+            if rating["applicant_id"].isspace():
+                print("Empty applicant", rating)
+                continue
             if rating["status"] == 'Зачислен':
                 granted.append(rating['applicant_id'])
                 if rating["applicant_id"] in applicants:
@@ -463,6 +466,8 @@ def calculate_ratings(ratings, filtered_competition_groups, special_competition_
                 continue
 
             modified_total_score = int(rating["score_total"])
+            if modified_total_score < 25:
+                continue
             if special_competition_groups[rating['competition_group_id']]:
                 modified_priority = int(rating['priority'])
             #elif rating['note'] == "Без вступительных испытаний":
@@ -489,7 +494,7 @@ def calculate_ratings(ratings, filtered_competition_groups, special_competition_
                             int(rating["score_subject_2"]),
                             int(rating["score_subject_3"])
                         ),
-                        rating["note"].replace('&quot;', '"')
+                        rating["note"].replace('&quot;', '"') + " " + rating["status"]
                     )]
                 }
             else:
@@ -507,7 +512,7 @@ def calculate_ratings(ratings, filtered_competition_groups, special_competition_
                         int(rating["score_subject_2"]),
                         int(rating["score_subject_3"])
                     ),
-                    rating["note"].replace('&quot;', '"')
+                    rating["note"].replace('&quot;', '"') + " " + rating["status"]
                 ))
         except Exception as e:
             print("Exception", e, file=logout)
@@ -576,7 +581,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups, granted):
                 int(rating["original_submitted"]),
 
                 rating['applicant_id'],
-                rating["note"]
+                rating["note"].replace('&quot;', '"') + " " + rating["status"]
             ))
             if rating['applicant_id'] in applicants_json:
                 applicants_json[rating['applicant_id']].append((
@@ -592,7 +597,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups, granted):
                     ),
                     rating["consent_submitted"],
                     rating["original_submitted"],
-                    rating["note"].replace('&quot;', '"')
+                    rating["note"].replace('&quot;', '"') + " " + rating["status"]
                 ))
             else:
                 applicants_json[rating['applicant_id']] = [(
@@ -608,7 +613,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups, granted):
                     ),
                     rating["consent_submitted"],
                     rating["original_submitted"],
-                    rating["note"].replace('&quot;', '"')
+                    rating["note"].replace('&quot;', '"') + " " + rating["status"]
                 )]
 
             """ modified_priority, group_id, scoring(5*int), consent, original, note """

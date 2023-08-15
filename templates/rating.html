@@ -32,7 +32,12 @@
 
         <td>{{loop.index}}</td>
         <td>{{position}}</td>
-        <td><a href="/applicants/{{item[4]}}">{{item[4]}}</a></td>
+        {% if item[4] in ours %}
+            {% set app_name = ours[item[4]] %}
+        {% else %}
+            {% set app_name = item[4] %}
+        {% endif %}
+        <td><a href="/applicants/{{item[4]}}">{{app_name}}</a></td>
         {% if item[1][0] == 500 %}
             {% set scoring = '-' %}
             {% set scoring1 = '-' %}
