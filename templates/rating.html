@@ -21,49 +21,54 @@
     </thead>
     <tbody>
     {% for item in stacks[3][group_id] %}
-        {% if item[0] == 0 %}
-            {% set position = '' %}
-            {% set class_name = 'table-light' %}
+        {% if item[0] == 1 %}
+            {% set position = loop.index %}
+            {% set class_name = 'table-primary' %}
         {% else %}
+        {% if item[1] == 1 %}
             {% set position = loop.index %}
             {% set class_name = 'table-success' %}
+        {% else %}
+            {% set position = '' %}
+            {% set class_name = 'table-light' %}
+        {% endif %}
         {% endif %}
         <tr class={{class_name}}>
 
         <td>{{loop.index}}</td>
         <td>{{position}}</td>
-        {% if item[4] in ours %}
-            {% set app_name = ours[item[4]] %}
+        {% if item[5] in ours %}
+            {% set app_name = ours[item[5]] %}
         {% else %}
-            {% set app_name = item[4] %}
+            {% set app_name = item[5] %}
         {% endif %}
-        <td><a href="/applicants/{{item[4]}}">{{app_name}}</a></td>
-        {% if item[1][0] == 500 %}
+        <td><a href="/applicants/{{item[5]}}">{{app_name}}</a></td>
+        {% if item[2][0] == 500 %}
             {% set scoring = '-' %}
             {% set scoring1 = '-' %}
             {% set scoring2 = '-' %}
             {% set scoring3 = '-' %}
             {% set score_id = '-' %}
         {% else %}
-            {% set scoring = item[1][0] %}
-            {% set scoring1 = item[1][2] %}
-            {% set scoring2 = item[1][3] %}
-            {% set scoring3 = item[1][4] %}
-            {% set score_id = item[1][0] - item[1][1] %}
+            {% set scoring = item[2][0] %}
+            {% set scoring1 = item[2][2] %}
+            {% set scoring2 = item[2][3] %}
+            {% set scoring3 = item[2][4] %}
+            {% set score_id = item[2][0] - item[2][1] %}
         {% endif %}
         <td>{{scoring}}</td>
         <td>{{scoring1}}</td>
         <td>{{scoring2}}</td>
         <td>{{scoring3}}</td>
         <td>{{score_id}}</td>
-        <td>{{item[2]}}</td>
-        {% if item[3] %}
+        <td>{{item[3]}}</td>
+        {% if item[4] %}
             {% set original = 'Да' %}
         {% else %}
             {% set original = 'Нет' %}
         {% endif %}
         <td>{{original}}</td>
-        <td>{{item[5]}}</td>
+        <td>{{item[6]}}</td>
       </tr>
     {% endfor %}
     </tbody>

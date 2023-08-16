@@ -16,19 +16,23 @@ def main_parsing(logout):
 
     filtered_competition_groups = {group["id"]: 0 for group in data['competition_groups']
                                    if (group['specialty_code'][3:5] in ['03', '05'] and
-                                   group['funding'] == "Бюджетная основа" and group['category'] == "Общая") or
+                                   group['funding'] == "Бюджетная основа"
+                                       #and group['category'] == "Общая"
+                                       ) or
                                    (group['specialty_code'][3:5] == '04' and group['funding'] == "Бюджетная основа" and
                                     group['category'] in ["Общая", "Целевая"])}
     special_competition_groups = {group["id"]: (group["category"] in ["Особая", "Отдельная", "Целевая"])
                                   for group in data['competition_groups']
                                   if (group['specialty_code'][3:5] in ['03', '05'] and
-                                      group['funding'] == "Бюджетная основа" and group['category'] == "Общая") or
+                                      group['funding'] == "Бюджетная основа"
+                                      #and group['category'] == "Общая"
+                                      ) or
                                   (group['specialty_code'][3:5] == '04' and group['funding'] == "Бюджетная основа" and
                                    group['category'] in ["Общая", "Целевая"])}
 
     competition_groups = {}  # info by group_id
     common_competition_groups = {}  # group_id by profile, category by speciality code
-    mag_goal_to_common = {}
+    unusial_to_common = {}
     for group in data['competition_groups']:
         if group['id'] in filtered_competition_groups:
             competition_groups[group['id']] = {
@@ -51,20 +55,29 @@ def main_parsing(logout):
                         print("repeat", (group["profile"].strip(), group["education_form"].strip()), file=logout)
                     else:
                         common_competition_groups[(group["specialty_code"].strip(), group["profile"].strip())][group["education_form"].strip()] = group['id']
-            if group['specialty_code'][3:5] == '04' and group['funding'] == "Бюджетная основа" and \
+            '''if group['specialty_code'][3:5] == '04' and group['funding'] == "Бюджетная основа" and \
                     group['category'] == "Целевая":
-                mag_goal_to_common[group["id"]] = (group["specialty_code"].strip(),
+                unusial_to_common[group["id"]] = (group["specialty_code"].strip(),
+                                                   group["profile"].strip(),
+                                                   # group["institution_name"].strip(),
+                                                   group["education_form"].strip())
+                                                   '''
+            if group['specialty_code'][3:5] in ['03', '04', '05'] and group['funding'] == "Бюджетная основа" and \
+                    group['category'] in ["Особая", "Отдельная", "Целевая"]:
+                unusial_to_common[group["id"]] = (group["specialty_code"].strip(),
                                                    group["profile"].strip(),
                                                    # group["institution_name"].strip(),
                                                    group["education_form"].strip())
 
-    for group_id, item in mag_goal_to_common.items():
-        mag_goal_to_common[group_id] = common_competition_groups[(item[0], item[1])][item[2]]
+    for group_id, item in unusial_to_common.items():
+        # print(unusial_to_common[group_id], end=" - ")
+        unusial_to_common[group_id] = common_competition_groups[(item[0], item[1])][item[2]]
+        # print(unusial_to_common[group_id])
 
     for group in data['admission_plans']:
         if group['competition_group_id'] in filtered_competition_groups.keys():
             filtered_competition_groups[group['competition_group_id']] = group['number']
-
+    # обновление количества мест из файла с сайта
     with open("init_data/init_bach_groups.htm", 'r', encoding="utf-8") as html_str:
 
         columns_bach = ['№', 'sp', 'profile', 'plan', 'granted', 'deleted',
@@ -93,16 +106,61 @@ def main_parsing(logout):
                     if len(row) != 0:
                         sp_code = row[1].split()[0]
                         profile = row[2]
-                        stack_len = int(row[6])
+                        stack_len = int(row[3]) # 6
                         if funding == "Бюджетная основа":
                             group_id = common_competition_groups[(sp_code, profile)][edu_form]
                             filtered_competition_groups[group_id] = stack_len
-
-
+                            #print(group_id, stack_len)
             except Exception as e:
                 print("Исключение:", e, "на строке", line,
                       file=logout)
 
+    with open("init_data/init_mag_groups.htm", 'r', encoding="utf-8") as html_str:
+
+        columns_bach = ['№', 'sp', 'profile', 'plan', 'granted', 'deleted',
+                        'vacant', 'apps', 'originals', 'KPO', 'KPZ']
+        is_table = False
+
+        for line in html_str:
+            try:
+                line = line.strip()
+                if line.startswith('<h4'):
+                    is_table = True
+                    new_part = line[line.find(">") + 1:-(len('</h4>'))]
+                    inst_name, edu_form, funding = new_part.split(", ")
+                elif line.startswith('</table>'):
+                    is_table = False
+
+                elif is_table and line.startswith('<tr'):
+                    row = []
+                elif is_table and line.startswith('<td'):
+                    if len(row) >= len(columns_bach):
+                        print("error", line, file=logout)
+                        row = []
+                    value = line[len('<td>'):-len('</td>')]
+                    row.append(value)
+                elif is_table and line.startswith('</tr'):
+                    if len(row) != 0:
+                        sp_code = row[1].split()[0]
+                        profile = row[2].strip()
+                        if profile == "Юрист в сфере гражданского права и процесса, Адвокатская и правозащитная деятельность ВШЭ, " \
+                                      "Правовое регулирование в сфере экспорта. МГЮА, Юрист в сфере финансовой и налоговой деятельности, " \
+                                      "Юрист в сфере градостроительных, земельно-имущественных и природоресурсных отношений, " \
+                                      "Юрист в сфере предпринимательского права, Правовое регулирование государственного и муниципального управления, " \
+                                      "Юрист в сфере уголовного судопроизводства":
+                            profile = "Юрист в сфере гражданского права и процесса , Адвокатская и правозащитная деятельность ВШЭ , " \
+                                      "Правовое регулирование в сфере экспорта. МГЮА , Юрист в сфере финансовой и налоговой деятельности , " \
+                                      "Юрист в сфере градостроительных, земельно-имущественных и природоресурсных отношений , " \
+                                      "Юрист в сфере предпринимательского права , Правовое регулирование государственного и муниципального управления , " \
+                                      "Юрист в сфере уголовного судопроизводства"
+                        stack_len = int(row[3])   # 6
+                        if funding == "Бюджетная основа":
+                            group_id = common_competition_groups[(sp_code, profile)][edu_form]
+                            filtered_competition_groups[group_id] = stack_len
+                            #print(group_id, stack_len)
+            except Exception as e:
+                print("Исключение:", e, "на строке", line,
+                      file=logout)
     # извлечение списка направлений из страницы - из выпадающего списка, в т.ч. полное название и номер для запроса
     specialities_on_site = {}
     specialities_full_names = {}
@@ -198,9 +256,9 @@ def main_parsing(logout):
         ratings = json.load(writefile)
     datenow = dt.now().strftime("%m.%d..%H.%M")
     '''
-    granted = []
+    granted = {}
     applicants, competition_group_green_stacks = calculate_ratings(ratings, filtered_competition_groups,
-                                                                   special_competition_groups, mag_goal_to_common,
+                                                                   special_competition_groups, unusial_to_common,
                                                                    granted, logout)
     print(dt.now(), "ratings with greens are calculated", file=logout)
     with open("result_data/granted.txt", mode='w', encoding="utf-8") as writefile:
@@ -444,7 +502,7 @@ def check_green_stacks(competition_group_green_stacks, filtered_competition_grou
 
 
 def calculate_ratings(ratings, filtered_competition_groups, special_competition_groups,
-                      mag_goal_to_common, granted, logout):
+                      unusial_to_common, granted, logout):
     applicants = {}
 
     for rating in ratings:
@@ -452,13 +510,9 @@ def calculate_ratings(ratings, filtered_competition_groups, special_competition_
             if rating["applicant_id"].isspace():
                 print("Empty applicant", rating)
                 continue
-            if rating["status"] == 'Зачислен':
-                granted.append(rating['applicant_id'])
-                if rating["applicant_id"] in applicants:
-                    del applicants[rating["applicant_id"]]
-                continue
-            if rating["applicant_id"] in granted:
-                continue
+
+            # if rating["applicant_id"] in granted:
+                # continue
             if rating['competition_group_id'] not in filtered_competition_groups:
                 continue
 
@@ -466,19 +520,35 @@ def calculate_ratings(ratings, filtered_competition_groups, special_competition_
                 continue
 
             modified_total_score = int(rating["score_total"])
-            if modified_total_score < 25:
+            is_granted = False
+            if rating["status"] == 'Зачислен':
+                granted[rating['applicant_id']] = rating['competition_group_id']
+                is_granted = True
+                modified_priority = -1000
+                if modified_total_score == 0:
+                    modified_total_score = 500
+                '''
+                if rating["applicant_id"] in applicants:
+                    del applicants[rating["applicant_id"]]
                 continue
-            if special_competition_groups[rating['competition_group_id']]:
-                modified_priority = int(rating['priority'])
-            #elif rating['note'] == "Без вступительных испытаний":
-            #    modified_priority = 0
-            #    modified_total_score = 500
+                '''
+            elif rating["status"] == "Зачислен на другое направление/конкурс":
+                modified_priority = 1000
+            elif special_competition_groups[rating['competition_group_id']]:
+                modified_priority = int(rating['priority']) if rating['priority'] != "" else 1000
+            elif "Без вступительных испытаний" in rating['note']:
+                modified_priority = 0
+                modified_total_score = 500
             else:
-                modified_priority = int(rating['priority']) + 100
+                modified_priority = (int(rating['priority']) if rating['priority'] != "" else 1000) + 100
             if int(rating["score_subject_1"]) == 0 or \
                     int(rating["score_subject_2"]) == 0 or \
                     int(rating["score_subject_3"]) == 0:
                 modified_priority += 1000
+
+            if modified_total_score < 25:
+                continue
+
             if rating["applicant_id"] not in applicants:
                 applicants[rating["applicant_id"]] = {
                     'max_score_total': modified_total_score,
@@ -524,21 +594,25 @@ def calculate_ratings(ratings, filtered_competition_groups, special_competition_
     competition_group_green_stacks = {group_id: [] for group_id in filtered_competition_groups}
 
     for applicant_id in sorted(applicants, key=lambda x: applicants[x]['max_score_total'], reverse=True):
-        if applicant_id in granted:
-            continue
-        if any([item[1] in mag_goal_to_common for item in applicants[applicant_id]['competition_groups_priorities']]):
+        #if applicant_id in granted:
+            #continue
+        if any([item[1] in unusial_to_common for item in applicants[applicant_id]['competition_groups_priorities']]):
             calculate_place(applicant_id, 0,
                             applicants, competition_group_green_stacks, filtered_competition_groups, logout)
-    for group_id in mag_goal_to_common:
+
+    for group_id in unusial_to_common:
         if len(competition_group_green_stacks[group_id]) > 0:
-            # print("Целевая", group_id, competition_group_green_stacks[group_id], file=logout)
-            filtered_competition_groups[mag_goal_to_common[group_id]] -= len(competition_group_green_stacks[group_id])
+            print("Уменьшение мест", unusial_to_common[group_id], "(от", group_id, ")",
+                  "на", len(competition_group_green_stacks[group_id]),
+                  ": было", filtered_competition_groups[unusial_to_common[group_id]], file=logout, end=" ")
+            filtered_competition_groups[unusial_to_common[group_id]] -= len(competition_group_green_stacks[group_id])
+            print("стало", filtered_competition_groups[unusial_to_common[group_id]], file=logout)
 
     for group_id in competition_group_green_stacks:
         competition_group_green_stacks[group_id].clear()
     for applicant_id in sorted(applicants, key=lambda x: applicants[x]['max_score_total'], reverse=True):
-        if applicant_id in granted:
-            continue
+        #if applicant_id in granted:
+            #continue
         applicants[applicant_id]["consent"] = ""
         result = calculate_place(applicant_id, 0,
                                  applicants, competition_group_green_stacks, filtered_competition_groups, logout)
@@ -554,11 +628,11 @@ def calculate_white_stacks(ratings, filtered_competition_groups, granted):
     applicants_json = {}
     for rating in ratings:
         group_id = rating["competition_group_id"]
+        is_granted = False
         modified_total_score = int(rating["score_total"])
         if rating['applicant_id'] in granted:
-            continue
-        # if rating['note'] == "Без вступительных испытаний":
-        #     modified_total_score = 500
+            if granted[rating['applicant_id']] == rating['competition_group_id']:
+                is_granted = True
 
         if group_id in white_stacks:
             """
@@ -569,6 +643,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups, granted):
                       int(rating["score_subject_2"]), int(rating["score_subject_3"]))
             """
             white_stacks[group_id].append((
+                int(is_granted),
                 int(rating["consent_submitted"]),
                 (
                     modified_total_score,
@@ -577,6 +652,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups, granted):
                     int(rating["score_subject_2"]),
                     int(rating["score_subject_3"])
                 ),
+                # modified_priority,
                 int(rating['priority']) if rating['priority'] != "" else 0,
                 int(rating["original_submitted"]),
 
@@ -585,6 +661,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups, granted):
             ))
             if rating['applicant_id'] in applicants_json:
                 applicants_json[rating['applicant_id']].append((
+                    # modified_priority,
                     int(rating['priority']) if rating['priority'] != "" else 0,
                     group_id,
                     (
@@ -601,6 +678,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups, granted):
                 ))
             else:
                 applicants_json[rating['applicant_id']] = [(
+                    # modified_priority,
                     int(rating['priority']) if rating['priority'] != "" else 0,
                     group_id,
                     (
@@ -619,7 +697,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups, granted):
             """ modified_priority, group_id, scoring(5*int), consent, original, note """
 
     for group_id in white_stacks:
-        white_stacks[group_id].sort(reverse=True, key=lambda x: (x[0], x[1], -x[2], x[3]))
+        white_stacks[group_id].sort(reverse=True, key=lambda x: (x[0], x[1], x[2], -x[3], x[4]))
     for applicant_id in applicants_json:
         applicants_json[applicant_id].sort()
 
@@ -628,7 +706,7 @@ def calculate_white_stacks(ratings, filtered_competition_groups, granted):
 
 def print_out(datenow, competition_groups, competition_group_green_stacks, filtered_competition_groups,
               competition_group_white_stacks):
-    with open('result_data/' + datenow + "_lists.out", 'w', encoding="utf-8") as outfile:
+    with open('result_data/outs/' + datenow + "_lists.out", 'w', encoding="utf-8") as outfile:
         for group_id in competition_group_green_stacks:
             # print(f"group {group_id}, ", file=outfile)
             print(competition_groups[group_id]["specialty_code"],
@@ -650,7 +728,7 @@ def print_out(datenow, competition_groups, competition_group_green_stacks, filte
                     file=outfile)
             print("-" * 20, file=outfile)
 
-    with open('result_data/' + datenow + "_brief.csv", 'w', encoding="utf-8") as outfile:
+    with open('result_data/outs/' + datenow + "_brief.csv", 'w', encoding="utf-8") as outfile:
         print("specialty_code", "profile", "institution_name", "education_form", "funding", "category",
               'plan_places', "current_places", "fraction", "ratings", "originals", sep=';', file=outfile)
         for group_id in competition_group_green_stacks:

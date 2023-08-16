@@ -69,7 +69,7 @@ def all_rating_master():
         stacks = json.load(stacks_file)
     return render_template('all_rating_mag.html', stacks=stacks,
                            title="Статистика по направлениям УУНиТ",
-                           header="Статистика по направлениям",
+                           header="Статистика по направлениям магистратуры",
                            load_time=last_update_dt)
 
 
